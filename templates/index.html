@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Bot Interface</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>林米奇與小麻糬的KTV</h1>
+        </header>
+        <main>
+            <form id="search-form" class="search-bar">
+                <input type="text" id="query" name="query" placeholder="Search for a song">
+                <button type="submit"><i class="fa fa-search"></i></button>
+            </form>
+            <div class="content">
+                <section class="search-results">
+                    <h2>米奇幫你找</h2>
+                    <ul id="results" class="song-list"></ul>
+                </section>
+                <section class="queue">
+                    <h2>米奇排排站</h2>
+                    <ul id="queue" class="song-list"></ul>
+                </section>
+            </div>
+            <div class="player" id="player">
+                <img src="" alt="Cover" id="player-cover" class="player-cover">
+                <div class="player-details">
+                    <div class="player-info">
+                        <h3 id="player-title">Title</h3>
+                        <p id="player-artist">Artist</p>
+                    </div>
+                    <input type="range" id="seek-bar" value="0">
+                </div>
+                <div class="player-controls">
+                    <button id="prev-button"><i class="fa fa-backward"></i></button>
+                    <button id="play-button"><i class="fa fa-play"></i></button>
+                    <button id="next-button"><i class="fa fa-forward"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchForm = document.getElementById('search-form');
+            const queryInput = document.getElementById('query');
+            const resultsList = document.getElementById('results');
+            const queueList = document.getElementById('queue');
+            const player = document.getElementById('player');
+            const playerCover = document.getElementById('player-cover');
+            const playerTitle = document.getElementById('player-title');
+            const playerArtist = document.getElementById('player-artist');
+            const playButton = document.getElementById('play-button');
+            const seekBar = document.getElementById('seek-bar');
+
+            let currentSong = null;
+
+            searchForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const query = queryInput.value;
+                fetch('/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    resultsList.innerHTML = '';
+                    data.forEach(song => {
+                        const li = document.createElement('li');
+                        li.className = 'song-item';
+                        li.innerHTML = `
+                            <img src="${song.thumbnail}" class="thumbnail" alt="Thumbnail">
+                            <div class="song-info">
+                                <span class="song-title">${song.title}</span>
+                                <span class="song-author">${song.author}</span>
+                            </div>
+                            <button class="add-button" data-url="${song.url}"><i class="fa fa-plus"></i> Add</button>
+                        `;
+                        resultsList.appendChild(li);
+                    });
+
+                    document.querySelectorAll('.add-button').forEach(button => {
+                        button.addEventListener('click', () => {
+                            const song = {
+                                title: button.parentElement.querySelector('.song-title').innerText,
+                                author: button.parentElement.querySelector('.song-author').innerText,
+                                url: button.getAttribute('data-url'),
+                                thumbnail: button.parentElement.querySelector('.thumbnail').src
+                            };
+                            fetch('/add_to_queue', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ song })
+                            })
+                            .then(response => response.json())
+                            .then(updateQueue);
+                        });
+                    });
+                });
+            });
+
+            function updateQueue(data) {
+                queueList.innerHTML = '';
+                data.forEach(song => {
+                    const li = document.createElement('li');
+                    li.className = 'song-item';
+                    li.innerHTML = `
+                        <img src="${song.thumbnail}" class="thumbnail" alt="Thumbnail">
+                        <div class="song-info">
+                            <span class="song-title">${song.title}</span>
+                            <span class="song-author">${song.author}</span>
+                        </div>
+                        <button class="remove-button" data-url="${song.url}"><i class="fa fa-trash"></i> Remove</button>
+                    `;
+                    queueList.appendChild(li);
+                });
+
+                document.querySelectorAll('.remove-button').forEach(button => {
+                    button.addEventListener('click', () => {
+                        fetch('/remove_from_queue', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ url: button.getAttribute('data-url') })
+                        })
+                        .then(response => response.json())
+                        .then(updateQueue);
+                    });
+                });
+
+                // Update player with the first song in the queue if there's no current song
+                if (!currentSong && data.length > 0) {
+                    setCurrentSong(data[0]);
+                }
+            }
+
+            function setCurrentSong(song) {
+                currentSong = song;
+                playerCover.src = song.thumbnail;
+                playerTitle.innerText = song.title;
+                playerArtist.innerText = song.author;
+                // Update play button state
+                playButton.innerHTML = '<i class="fa fa-pause"></i>';
+            }
+
+            function updateCurrentSong() {
+                fetch('/get_current_song')
+                    .then(response => response.json())
+                    .then(song => {
+                        if (song) {
+                            setCurrentSong(song);
+                        }
+                    });
+            }
+
+            // Periodically update the current song
+            setInterval(updateCurrentSong, 1000);
+
+            fetch('/get_queue')
+                .then(response => response.json())
+                .then(updateQueue);
+        });
+    </script>
+</body>
+</html>
