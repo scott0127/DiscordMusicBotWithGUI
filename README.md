@@ -4,7 +4,8 @@
 # Discord 音樂機器人帶有 GUI
 
 這個項目是用 Python 編寫的一個 Discord 音樂機器人，具有圖形用戶界面（GUI），可以在 Discord 聊天中播放音樂。它支持從 YouTube 和 Spotify 播放音樂，並提供了一些基本的音樂控制功能。
-HACKMD=> HackMD URL: [https://hackmd.io/@pakkkk/SyAM5MGqC]
+-HACKMD=> HackMD URL: https://hackmd.io/@pakkkk/SyAM5MGqC
+-HACKMD那邊有些操作上的說明與STEP BY STEP
 ## 功能介紹
 
 - **播放 YouTube 音樂**：使用 `!play` 命令可以通過網址或關鍵詞播放 YouTube 上的音樂。
